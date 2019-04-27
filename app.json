@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "MeltyTask",
-    "slug": "melty-task",
+    "name": "MeltyTasks",
+    "slug": "melty-tasks",
     "privacy": "public",
     "sdkVersion": "32.0.0",
     "platforms": [
