@@ -9,10 +9,13 @@ import {
   Button,
   TextInput,
   Keyboard,
-  Platform
+  Platform,
+  Animated,
+  TouchableHighlight,
+  TouchableOpacity
 } from 'react-native';
 import SafeAreaView from 'react-native-safe-area-view';
-import Swipeout from 'react-native-swipeout';
+import { SwipeListView } from 'react-native-swipe-list-view';
 
 const isAndroid = Platform.OS == "android";
 const viewPadding = 10;
@@ -22,6 +25,8 @@ export default class App extends React.Component {
     tasks: [],
     text: ""
   };
+
+  rowTranslateAnimatedValues = {};
 
   changeTextHandler = text => {
     this.setState({ text: text });
@@ -34,8 +39,12 @@ export default class App extends React.Component {
       this.setState(
         prevState => {
           let { tasks, text } = prevState;
+          let key = tasks.length.toString();
+
+          this.rowTranslateAnimatedValues[key] = new Animated.Value(1);
+
           return {
-            tasks: tasks.concat({ key: tasks.length.toString(), text: text }),
+            tasks: tasks.concat({ key: key, text: text }),
             text: ""
           };
         },
@@ -52,6 +61,8 @@ export default class App extends React.Component {
         let i = Number(key);
 
         tasks.splice(i, 1);
+
+        delete this.rowTranslateAnimatedValues[key]
 
         return { tasks: tasks };
       },
@@ -70,11 +81,25 @@ export default class App extends React.Component {
       () => this.setState({ viewPadding: viewPadding })
     );
 
-    Tasks.all(tasks => this.setState({ tasks: tasks || [] }));
+    Tasks.all(tasks => {
+      for (var i in tasks) {
+        this.rowTranslateAnimatedValues[tasks[i].key] = new Animated.Value(1);
+      }
+
+      this.setState({ tasks: tasks || [] })
+    });
   }
 
-  _done({ item, index }) {
-    this.deleteTask(item.key);
+  onSwipeValueChange = (swipeData) => {
+    const { key, value } = swipeData;
+    // 375 or however large your screen is (i.e. Dimensions.get('window').width)
+    if (375 < value && !this.animationIsRunning) {
+      this.animationIsRunning = true;
+      Animated.timing(this.rowTranslateAnimatedValues[key], { toValue: 0, duration: 200 }).start(() => {
+          this.deleteTask(key);
+          this.animationIsRunning = false;
+      });
+    }
   }
 
   render() {
@@ -82,12 +107,28 @@ export default class App extends React.Component {
       <SafeAreaView
         style={[styles.container, { paddingBottom: this.state.viewPadding }]}
       >
-        <FlatList
+        <SwipeListView
+          useFlatList
           style={styles.list}
           data={this.state.tasks}
           renderItem={this._renderItem.bind(this)}
+          renderHiddenItem={ (data, rowMap) => (
+            <View style={styles.rowBack}>
+              <View style={styles.backLeftBtn}>
+                <Text style={styles.backTextWhite}>Done</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.backRightBtn, styles.backRightBtnLeft]}
+                onPress={ _ => this.deleteTask(data.item.key) }>
+  							<Text style={styles.backTextWhite}>Close</Text>
+  						</TouchableOpacity>
+            </View>
+          )}
           keyExtractor={(item, index) => item.key}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
+          leftOpenValue={375}
+          rightOpenValue={-75}
+          onSwipeValueChange={this.onSwipeValueChange}
         />
         <TextInput
           style={styles.textInput}
@@ -103,26 +144,29 @@ export default class App extends React.Component {
   }
 
   _renderItem({ item, index }) {
-    const swipeBtns = [{
-      text: 'Done',
-      backgroundColor: 'blue',
-      underlayColor: 'rgba(0,0,0,1)',
-      onPress: () => { this._done({ item, index }) },
-    }];
-
     return (
-      <Swipeout
-        right={swipeBtns}
-        autoClose={true}
-        backgroundColor='transparent' >
-        <View style={styles.listItemCont} >
-          <Text
-            style={styles.litTiem}
-            numberOfLines={1} >
-            {item.text}
-          </Text>
-        </View>
-      </Swipeout>
+      <Animated.View style={[styles.rowFrontContainer,
+        {
+          height: this.rowTranslateAnimatedValues[item.key].interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, 50],
+          })
+        }
+      ]}>
+          <TouchableHighlight
+            onPress={ _ => console.log('You touched me') }
+            style={styles.rowFront}
+            underlayColor={'#AAA'}
+          >
+            <View style={styles.listItemCont} >
+              <Text
+                style={styles.litTiem}
+                numberOfLines={0} >
+                {item.text}
+              </Text>
+            </View>
+          </TouchableHighlight>
+      </Animated.View>
     );
   }
 }
@@ -167,6 +211,43 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "gray"
   },
+  rowFrontContainer: {},
+  rowFront: {
+    alignItems: 'center',
+		backgroundColor: '#CCC',
+		borderBottomColor: 'black',
+		borderBottomWidth: 1,
+		justifyContent: 'center',
+		height: 50,
+  },
+  rowBack: {
+    alignItems: 'center',
+		backgroundColor: '#DDD',
+		flex: 1,
+		flexDirection: 'row',
+		justifyContent: 'space-between',
+		paddingLeft: 15,
+  },
+  backLeftBtn: {
+		alignItems: 'center',
+		bottom: 0,
+		justifyContent: 'center',
+		position: 'absolute',
+		top: 0,
+		width: 75,
+    backgroundColor: '#fff',
+		left: 0
+	},
+  backRightBtn: {
+		alignItems: 'center',
+		bottom: 0,
+		justifyContent: 'center',
+		position: 'absolute',
+		top: 0,
+		width: 75,
+    backgroundColor: 'red',
+		right: 0
+	},
   listItemCont: {
     flexDirection: "row",
     alignItems: "center",
