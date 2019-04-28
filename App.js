@@ -287,7 +287,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#F5FCFF",
     padding: viewPadding,
-    paddingTop: 20
+    paddingTop: 60,
+    paddingBottom: 60
   },
   list: {
     width: "100%"
@@ -364,11 +365,7 @@ const styles = StyleSheet.create({
   backButtonText: {
     color: '#fff',
   },
-  listItemCont: {
-    // flexDirection: "row",
-    // alignItems: "center",
-    // justifyContent: "space-between"
-  },
+  listItemCont: {},
   textInput: {
     height: 40,
     paddingRight: 10,
