@@ -108,6 +108,20 @@ export default class App extends React.Component {
     );
   };
 
+  meltTasks = () => {
+    let now = moment();
+
+    let tasks = this.state.tasks.slice();
+
+    for (var i in tasks) {
+      let t = tasks[i];
+
+      if (moment(t.at).add(24, 'hours') < now) {
+        this.deleteTask(t.key);
+      }
+    }
+  };
+
   componentDidMount() {
     AppState.addEventListener('change', this._handleAppStateChange);
 
@@ -127,6 +141,8 @@ export default class App extends React.Component {
       }
 
       this.setState({ tasks: tasks || [] });
+
+      this.meltTasks();
     });
   }
 
@@ -136,7 +152,7 @@ export default class App extends React.Component {
 
   _handleAppStateChange = (nextAppState) => {
     if (nextAppState === 'active') {
-      console.log('App has come to the foreground!');
+      this.meltTasks();
     }
   };
 
