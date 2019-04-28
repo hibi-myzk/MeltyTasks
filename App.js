@@ -87,10 +87,14 @@ export default class App extends React.Component {
 
         var ts = tasks.splice(i, 1);
         ts = ts.map((t) => {
-          return({ key: newKey, text: t.text, done: true })
+          return({ key: newKey, text: t.text, done: !t.done })
         });
 
         tasks = tasks.concat(ts);
+        tasks = tasks.sort((a, b) => {
+          if (a.done == b.done) return 0;
+          return (a.done == true) ? 1 : -1;
+        })
 
         delete this.rowTranslateAnimatedValues[key]
         this.rowTranslateAnimatedValues[newKey] = new Animated.Value(1);
@@ -154,7 +158,9 @@ export default class App extends React.Component {
           renderHiddenItem={ (data, rowMap) => (
             <View style={styles.rowBack}>
               <View style={styles.backLeftBtn}>
-                <Text style={styles.backTextWhite}>Done</Text>
+                <Text style={styles.backTextWhite}>
+                  {data.item.done ? 'Undo' : 'Done'}
+                </Text>
               </View>
               <TouchableOpacity
                 style={[styles.backRightBtn, {
