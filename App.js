@@ -157,17 +157,17 @@ export default class App extends React.Component {
           renderItem={this._renderItem.bind(this)}
           renderHiddenItem={ (data, rowMap) => (
             <View style={styles.rowBack}>
-              <View style={styles.backLeftBtn}>
-                <Text style={styles.backTextWhite}>
+              <View style={styles.backLeftButton}>
+                <Text style={styles.backText}>
                   {data.item.done ? 'Undo' : 'Done'}
                 </Text>
               </View>
               <TouchableOpacity
-                style={[styles.backRightBtn, {
+                style={[styles.backRightButton, {
                   width: this.state.rightButtonWidth
                 }]}
                 onPress={ _ => this.deleteTask(data.item.key) }>
-  							<Text style={styles.backTextWhite}>Close</Text>
+  							<Text style={styles.backButtonText}>Delete</Text>
   						</TouchableOpacity>
             </View>
           )}
@@ -195,7 +195,7 @@ export default class App extends React.Component {
       return (
         <View style={styles.rowFrontDone} >
           <Text
-            style={styles.litTiem}
+            style={styles.listTextDone}
             numberOfLines={0} >
             {item.text}
           </Text>
@@ -218,7 +218,7 @@ export default class App extends React.Component {
             >
               <View style={styles.listItemCont} >
                 <Text
-                  style={styles.litTiem}
+                  style={styles.listText}
                   numberOfLines={0} >
                   {item.text}
                 </Text>
@@ -259,51 +259,50 @@ const styles = StyleSheet.create({
   list: {
     width: "100%"
   },
-  listItem: {
-    paddingTop: 2,
-    paddingBottom: 2,
-    fontSize: 18
-  },
   separator: {
     height: 1,
-    backgroundColor: "gray"
+    backgroundColor: '#F5FCFF'
   },
   rowFrontContainer: {},
   rowFront: {
-    alignItems: 'center',
-		backgroundColor: '#CCC',
-		borderBottomColor: 'black',
-		borderBottomWidth: 1,
+		backgroundColor: '#e54e4e',
 		justifyContent: 'center',
 		height: 50,
+    paddingLeft: 12,
+    paddingRight: 12,
   },
   rowFrontDone: {
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderBottomColor: 'black',
-    borderBottomWidth: 1,
+    backgroundColor: '#e2e2e2',
     justifyContent: 'center',
     height: 50,
+    paddingLeft: 12,
+    paddingRight: 12,
+  },
+  listText: {
+    color: '#fff',
+    fontSize: 22,
+  },
+  listTextDone: {
+    color: '#000',
+    fontSize: 18,
   },
   rowBack: {
     alignItems: 'center',
-		backgroundColor: '#DDD',
 		flex: 1,
 		flexDirection: 'row',
 		justifyContent: 'space-between',
 		paddingLeft: 15,
   },
-  backLeftBtn: {
+  backLeftButton: {
 		alignItems: 'center',
 		bottom: 0,
 		justifyContent: 'center',
 		position: 'absolute',
 		top: 0,
 		width: 75,
-    backgroundColor: '#fff',
 		left: 0
 	},
-  backRightBtn: {
+  backRightButton: {
 		alignItems: 'center',
 		bottom: 0,
 		justifyContent: 'center',
@@ -313,6 +312,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'red',
 		right: 0
 	},
+  backButtonText: {
+    color: '#fff',
+  },
   listItemCont: {
     flexDirection: "row",
     alignItems: "center",
@@ -333,5 +335,3 @@ const styles = StyleSheet.create({
     width: "100%"
   }
 });
-
-AppRegistry.registerComponent("TodoList", () => TodoList);
