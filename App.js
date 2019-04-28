@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import SafeAreaView from 'react-native-safe-area-view';
 import { SwipeListView } from 'react-native-swipe-list-view';
+import uuid from "uuid";
 
 const isAndroid = Platform.OS == "android";
 const viewPadding = 10;
@@ -23,7 +24,6 @@ const viewPadding = 10;
 export default class App extends React.Component {
   state = {
     tasks: [],
-    doneTasks: [],
     text: "",
     rightButtonWidth: 75
   };
@@ -41,14 +41,15 @@ export default class App extends React.Component {
     if (notEmpty) {
       this.setState(
         prevState => {
-          let { tasks, doneTasks, text, rightButtonWidth } = prevState;
-          let key = tasks.length.toString();
+          let { tasks, text, rightButtonWidth } = prevState;
+          let key = uuid.v4();
 
           this.rowTranslateAnimatedValues[key] = new Animated.Value(1);
 
+          tasks.splice(0, 0, { key: key, text: text, done: false })
+
           return {
-            tasks: tasks.concat({ key: key, text: text, done: false }),
-            doneTasks: doneTasks,
+            tasks: tasks,
             text: "",
             rightButtonWidth: rightButtonWidth
           };
@@ -63,7 +64,7 @@ export default class App extends React.Component {
       prevState => {
         let tasks = prevState.tasks.slice();
 
-        let i = Number(key);
+        let i = tasks.findIndex(item => item.key === key);
 
         tasks.splice(i, 1);
 
@@ -78,27 +79,25 @@ export default class App extends React.Component {
   doneTask = key => {
     this.setState(
       prevState => {
-        let tasks = prevState.tasks.slice();
+        var tasks = prevState.tasks.slice();
 
-        let i = Number(key);
+        let newKey = uuid.v4();
 
-        delete this.rowTranslateAnimatedValues[key]
-        this.rowTranslateAnimatedValues['done' + key] = new Animated.Value(1);
+        let i = tasks.findIndex(item => item.key === key);
 
         var ts = tasks.splice(i, 1);
         ts = ts.map((t) => {
-          return({ key: 'done' + t.key, text: t.text, done: true })
+          return({ key: newKey, text: t.text, done: true })
         });
 
-        return {
-          tasks: tasks,
-          doneTasks: prevState.doneTasks.concat(ts)
-        };
+        tasks = tasks.concat(ts);
+
+        delete this.rowTranslateAnimatedValues[key]
+        this.rowTranslateAnimatedValues[newKey] = new Animated.Value(1);
+
+        return { tasks: tasks };
       },
-      () => {
-        Tasks.save(this.state.tasks);
-        DoneTasks.save(this.state.doneTasks)
-      }
+      () => Tasks.save(this.state.tasks)
     );
   };
 
@@ -119,14 +118,6 @@ export default class App extends React.Component {
       }
 
       this.setState({ tasks: tasks || [] });
-    });
-
-    DoneTasks.all(tasks => {
-      for (var i in tasks) {
-        this.rowTranslateAnimatedValues[tasks[i].key] = new Animated.Value(1);
-      }
-
-      this.setState({ doneTasks: tasks || [] });
     });
   }
 
@@ -158,7 +149,7 @@ export default class App extends React.Component {
         <SwipeListView
           useFlatList
           style={styles.list}
-          data={this.state.tasks.concat(this.state.doneTasks)}
+          data={this.state.tasks}
           renderItem={this._renderItem.bind(this)}
           renderHiddenItem={ (data, rowMap) => (
             <View style={styles.rowBack}>
@@ -196,7 +187,7 @@ export default class App extends React.Component {
   _renderItem({ item, index }) {
     if (item.done) {
       return (
-        <View style={styles.listItemContDone} >
+        <View style={styles.rowFrontDone} >
           <Text
             style={styles.litTiem}
             numberOfLines={0} >
@@ -234,40 +225,19 @@ export default class App extends React.Component {
 }
 
 let Tasks = {
-  convertToArrayOfObject(tasks, callback) {
-    return callback(
-      tasks ? tasks.split("||").map((task, i) => ({ key: i.toString(), text: task, done: false })) : []
-    );
-  },
-  convertToStringWithSeparators(tasks) {
-    return tasks.map(task => task.text).join("||");
-  },
   all(callback) {
-    return AsyncStorage.getItem("TASKS", (err, tasks) =>
-      this.convertToArrayOfObject(tasks, callback)
+    return AsyncStorage.getItem("TASKS", (err, data) => {
+        tasks = JSON.parse(data) || [];
+        tasks = tasks.sort((a, b) => {
+          if (a.done == b.done) return 0;
+          return (a.done == true) ? 1 : -1;
+        })
+        callback(tasks);
+      }
     );
   },
   save(tasks) {
-    AsyncStorage.setItem("TASKS", this.convertToStringWithSeparators(tasks));
-  }
-};
-
-let DoneTasks = {
-  convertToArrayOfObject(tasks, callback) {
-    return callback(
-      tasks ? tasks.split("||").map((task, i) => ({ key: 'saved_done' + i.toString(), text: task, done: true })) : []
-    );
-  },
-  convertToStringWithSeparators(tasks) {
-    return tasks.map(task => task.text).join("||");
-  },
-  all(callback) {
-    return AsyncStorage.getItem("DONE_TASKS", (err, tasks) =>
-      this.convertToArrayOfObject(tasks, callback)
-    );
-  },
-  save(tasks) {
-    AsyncStorage.setItem("DONE_TASKS", this.convertToStringWithSeparators(tasks));
+    AsyncStorage.setItem("TASKS", JSON.stringify(tasks));
   }
 };
 
@@ -300,6 +270,14 @@ const styles = StyleSheet.create({
 		borderBottomWidth: 1,
 		justifyContent: 'center',
 		height: 50,
+  },
+  rowFrontDone: {
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderBottomColor: 'black',
+    borderBottomWidth: 1,
+    justifyContent: 'center',
+    height: 50,
   },
   rowBack: {
     alignItems: 'center',
