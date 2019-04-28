@@ -23,10 +23,13 @@ const viewPadding = 10;
 export default class App extends React.Component {
   state = {
     tasks: [],
-    text: ""
+    doneTasks: [],
+    text: "",
+    rightButtonWidth: 75
   };
 
   rowTranslateAnimatedValues = {};
+  animationIsRunning = false;
 
   changeTextHandler = text => {
     this.setState({ text: text });
@@ -38,14 +41,16 @@ export default class App extends React.Component {
     if (notEmpty) {
       this.setState(
         prevState => {
-          let { tasks, text } = prevState;
+          let { tasks, doneTasks, text, rightButtonWidth } = prevState;
           let key = tasks.length.toString();
 
           this.rowTranslateAnimatedValues[key] = new Animated.Value(1);
 
           return {
-            tasks: tasks.concat({ key: key, text: text }),
-            text: ""
+            tasks: tasks.concat({ key: key, text: text, done: false }),
+            doneTasks: doneTasks,
+            text: "",
+            rightButtonWidth: rightButtonWidth
           };
         },
         () => Tasks.save(this.state.tasks)
@@ -70,6 +75,33 @@ export default class App extends React.Component {
     );
   };
 
+  doneTask = key => {
+    this.setState(
+      prevState => {
+        let tasks = prevState.tasks.slice();
+
+        let i = Number(key);
+
+        delete this.rowTranslateAnimatedValues[key]
+        this.rowTranslateAnimatedValues['done' + key] = new Animated.Value(1);
+
+        var ts = tasks.splice(i, 1);
+        ts = ts.map((t) => {
+          return({ key: 'done' + t.key, text: t.text, done: true })
+        });
+
+        return {
+          tasks: tasks,
+          doneTasks: prevState.doneTasks.concat(ts)
+        };
+      },
+      () => {
+        Tasks.save(this.state.tasks);
+        DoneTasks.save(this.state.doneTasks)
+      }
+    );
+  };
+
   componentDidMount() {
     Keyboard.addListener(
       isAndroid ? "keyboardDidShow" : "keyboardWillShow",
@@ -86,17 +118,33 @@ export default class App extends React.Component {
         this.rowTranslateAnimatedValues[tasks[i].key] = new Animated.Value(1);
       }
 
-      this.setState({ tasks: tasks || [] })
+      this.setState({ tasks: tasks || [] });
+    });
+
+    DoneTasks.all(tasks => {
+      for (var i in tasks) {
+        this.rowTranslateAnimatedValues[tasks[i].key] = new Animated.Value(1);
+      }
+
+      this.setState({ doneTasks: tasks || [] });
     });
   }
 
   onSwipeValueChange = (swipeData) => {
     const { key, value } = swipeData;
+
+    if (value < 0) {
+      this.setState({ rightButtonWidth: 75 });
+    } else if (0 < value && !this.animationIsRunning) {
+      this.setState({ rightButtonWidth: 0 });
+    }
+
     // 375 or however large your screen is (i.e. Dimensions.get('window').width)
     if (375 < value && !this.animationIsRunning) {
       this.animationIsRunning = true;
       Animated.timing(this.rowTranslateAnimatedValues[key], { toValue: 0, duration: 200 }).start(() => {
-          this.deleteTask(key);
+          this.doneTask(key);
+          this.setState({ rightButtonWidth: 75 });
           this.animationIsRunning = false;
       });
     }
@@ -110,7 +158,7 @@ export default class App extends React.Component {
         <SwipeListView
           useFlatList
           style={styles.list}
-          data={this.state.tasks}
+          data={this.state.tasks.concat(this.state.doneTasks)}
           renderItem={this._renderItem.bind(this)}
           renderHiddenItem={ (data, rowMap) => (
             <View style={styles.rowBack}>
@@ -118,7 +166,9 @@ export default class App extends React.Component {
                 <Text style={styles.backTextWhite}>Done</Text>
               </View>
               <TouchableOpacity
-                style={[styles.backRightBtn, styles.backRightBtnLeft]}
+                style={[styles.backRightBtn, {
+                  width: this.state.rightButtonWidth
+                }]}
                 onPress={ _ => this.deleteTask(data.item.key) }>
   							<Text style={styles.backTextWhite}>Close</Text>
   						</TouchableOpacity>
@@ -144,37 +194,49 @@ export default class App extends React.Component {
   }
 
   _renderItem({ item, index }) {
-    return (
-      <Animated.View style={[styles.rowFrontContainer,
-        {
-          height: this.rowTranslateAnimatedValues[item.key].interpolate({
-            inputRange: [0, 1],
-            outputRange: [0, 50],
-          })
-        }
-      ]}>
-          <TouchableHighlight
-            onPress={ _ => console.log('You touched me') }
-            style={styles.rowFront}
-            underlayColor={'#AAA'}
-          >
-            <View style={styles.listItemCont} >
-              <Text
-                style={styles.litTiem}
-                numberOfLines={0} >
-                {item.text}
-              </Text>
-            </View>
-          </TouchableHighlight>
-      </Animated.View>
-    );
+    if (item.done) {
+      return (
+        <View style={styles.listItemContDone} >
+          <Text
+            style={styles.litTiem}
+            numberOfLines={0} >
+            {item.text}
+          </Text>
+        </View>
+      );
+    } else {
+      return (
+        <Animated.View style={[styles.rowFrontContainer,
+          {
+            height: this.rowTranslateAnimatedValues[item.key].interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, 50],
+            })
+          }
+        ]}>
+            <TouchableHighlight
+              onPress={ _ => console.log('You touched me') }
+              style={styles.rowFront}
+              underlayColor={'#AAA'}
+            >
+              <View style={styles.listItemCont} >
+                <Text
+                  style={styles.litTiem}
+                  numberOfLines={0} >
+                  {item.text}
+                </Text>
+              </View>
+            </TouchableHighlight>
+        </Animated.View>
+      );
+    }
   }
 }
 
 let Tasks = {
   convertToArrayOfObject(tasks, callback) {
     return callback(
-      tasks ? tasks.split("||").map((task, i) => ({ key: i.toString(), text: task })) : []
+      tasks ? tasks.split("||").map((task, i) => ({ key: i.toString(), text: task, done: false })) : []
     );
   },
   convertToStringWithSeparators(tasks) {
@@ -187,6 +249,25 @@ let Tasks = {
   },
   save(tasks) {
     AsyncStorage.setItem("TASKS", this.convertToStringWithSeparators(tasks));
+  }
+};
+
+let DoneTasks = {
+  convertToArrayOfObject(tasks, callback) {
+    return callback(
+      tasks ? tasks.split("||").map((task, i) => ({ key: 'saved_done' + i.toString(), text: task, done: true })) : []
+    );
+  },
+  convertToStringWithSeparators(tasks) {
+    return tasks.map(task => task.text).join("||");
+  },
+  all(callback) {
+    return AsyncStorage.getItem("DONE_TASKS", (err, tasks) =>
+      this.convertToArrayOfObject(tasks, callback)
+    );
+  },
+  save(tasks) {
+    AsyncStorage.setItem("DONE_TASKS", this.convertToStringWithSeparators(tasks));
   }
 };
 
@@ -244,7 +325,7 @@ const styles = StyleSheet.create({
 		justifyContent: 'center',
 		position: 'absolute',
 		top: 0,
-		width: 75,
+		// width: 75,
     backgroundColor: 'red',
 		right: 0
 	},
@@ -252,6 +333,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between"
+  },
+  listItemContDone: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: '#fff'
   },
   textInput: {
     height: 40,
