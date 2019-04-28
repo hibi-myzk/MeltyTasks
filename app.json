@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "MeltyTasks",
+    "name": "Melty Tasks",
     "slug": "melty-tasks",
     "privacy": "public",
     "sdkVersion": "32.0.0",
@@ -23,7 +23,12 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "jp.tofulab.MeltyTasks"
+    },
+    "android": {
+      "package": "jp.tofulab.MeltyTasks",
+      "permissions": []
     }
   }
 }
