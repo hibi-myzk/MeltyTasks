@@ -12,11 +12,14 @@ import {
   Platform,
   Animated,
   TouchableHighlight,
-  TouchableOpacity
+  TouchableOpacity,
+  AppState
 } from 'react-native';
 import SafeAreaView from 'react-native-safe-area-view';
 import { SwipeListView } from 'react-native-swipe-list-view';
 import uuid from "uuid";
+import moment from 'moment'
+// import 'moment/locale/ja'
 
 const isAndroid = Platform.OS == "android";
 const viewPadding = 10;
@@ -46,7 +49,7 @@ export default class App extends React.Component {
 
           this.rowTranslateAnimatedValues[key] = new Animated.Value(1);
 
-          tasks.splice(0, 0, { key: key, text: text, done: false })
+          tasks.splice(0, 0, { key: key, text: text, done: false, at: new Date() })
 
           return {
             tasks: tasks,
@@ -87,7 +90,7 @@ export default class App extends React.Component {
 
         var ts = tasks.splice(i, 1);
         ts = ts.map((t) => {
-          return({ key: newKey, text: t.text, done: !t.done })
+          return({ key: newKey, text: t.text, done: !t.done, at: t.at })
         });
 
         tasks = tasks.concat(ts);
@@ -106,6 +109,8 @@ export default class App extends React.Component {
   };
 
   componentDidMount() {
+    AppState.addEventListener('change', this._handleAppStateChange);
+
     Keyboard.addListener(
       isAndroid ? "keyboardDidShow" : "keyboardWillShow",
       e => this.setState({ viewPadding: e.endCoordinates.height + viewPadding })
@@ -124,6 +129,16 @@ export default class App extends React.Component {
       this.setState({ tasks: tasks || [] });
     });
   }
+
+  componentWillUnmount() {
+    AppState.removeEventListener('change', this._handleAppStateChange);
+  }
+
+  _handleAppStateChange = (nextAppState) => {
+    if (nextAppState === 'active') {
+      console.log('App has come to the foreground!');
+    }
+  };
 
   onSwipeValueChange = (swipeData) => {
     const { key, value } = swipeData;
@@ -199,13 +214,14 @@ export default class App extends React.Component {
             numberOfLines={0} >
             {item.text}
           </Text>
+          <Text style={styles.timeDone}>{moment(item.at).fromNow()}</Text>
         </View>
       );
     } else {
       return (
         <Animated.View style={[styles.rowFrontContainer,
           {
-            height: this.rowTranslateAnimatedValues[item.key].interpolate({
+            minHeight: this.rowTranslateAnimatedValues[item.key].interpolate({
               inputRange: [0, 1],
               outputRange: [0, 50],
             })
@@ -222,6 +238,7 @@ export default class App extends React.Component {
                   numberOfLines={0} >
                   {item.text}
                 </Text>
+                <Text style={styles.time}>{moment(item.at).fromNow()}</Text>
               </View>
             </TouchableHighlight>
         </Animated.View>
@@ -267,16 +284,20 @@ const styles = StyleSheet.create({
   rowFront: {
 		backgroundColor: '#e54e4e',
 		justifyContent: 'center',
-		height: 50,
+		minHeight: 50,
     paddingLeft: 12,
     paddingRight: 12,
+    paddingTop: 4,
+    paddingBottom: 4,
   },
   rowFrontDone: {
     backgroundColor: '#e2e2e2',
     justifyContent: 'center',
-    height: 50,
+    minHeight: 50,
     paddingLeft: 12,
     paddingRight: 12,
+    paddingTop: 4,
+    paddingBottom: 4,
   },
   listText: {
     color: '#fff',
@@ -285,6 +306,18 @@ const styles = StyleSheet.create({
   listTextDone: {
     color: '#000',
     fontSize: 18,
+  },
+  time: {
+    marginTop: 4,
+    textAlign: 'right',
+    color: '#fff',
+    fontSize: 16,
+  },
+  timeDone: {
+    marginTop: 4,
+    textAlign: 'right',
+    color: '#000',
+    fontSize: 16,
   },
   rowBack: {
     alignItems: 'center',
@@ -316,15 +349,9 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   listItemCont: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between"
-  },
-  listItemContDone: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: '#fff'
+    // flexDirection: "row",
+    // alignItems: "center",
+    // justifyContent: "space-between"
   },
   textInput: {
     height: 40,
