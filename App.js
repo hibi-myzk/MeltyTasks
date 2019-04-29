@@ -152,6 +152,7 @@ export default class App extends React.Component {
 
   _handleAppStateChange = (nextAppState) => {
     if (nextAppState === 'active') {
+      this.setState({ tasks: this.state.tasks });
       this.meltTasks();
     }
   };
