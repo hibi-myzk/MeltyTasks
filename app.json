@@ -3,12 +3,12 @@
     "name": "Melty Tasks",
     "slug": "melty-tasks",
     "privacy": "public",
-    "sdkVersion": "32.0.0",
+    "sdkVersion": "33.0.0",
     "platforms": [
       "ios",
       "android"
     ],
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "splash": {
@@ -28,7 +28,8 @@
     },
     "android": {
       "package": "jp.tofulab.MeltyTasks",
-      "permissions": []
+      "permissions": [],
+      "versionCode": 2
     }
   }
 }
