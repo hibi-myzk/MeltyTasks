@@ -5,7 +5,6 @@ import {
   Text,
   View,
   FlatList,
-  AsyncStorage,
   Button,
   TextInput,
   Keyboard,
@@ -15,6 +14,8 @@ import {
   TouchableOpacity,
   AppState
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import SafeAreaView from 'react-native-safe-area-view';
 import { SwipeListView } from 'react-native-swipe-list-view';
 import uuid from "uuid";
@@ -146,7 +147,7 @@ export default class App extends React.Component {
     });
   }
 
-  componentWillUnmount() {
+  UNSAFE_componentWillUnmount() {
     AppState.removeEventListener('change', this._handleAppStateChange);
   }
 
@@ -179,46 +180,48 @@ export default class App extends React.Component {
 
   render() {
     return (
-      <SafeAreaView
-        style={[styles.container, { paddingBottom: this.state.viewPadding }]}
-      >
-        <SwipeListView
-          useFlatList
-          style={styles.list}
-          data={this.state.tasks}
-          renderItem={this._renderItem.bind(this)}
-          renderHiddenItem={ (data, rowMap) => (
-            <View style={styles.rowBack}>
-              <View style={styles.backLeftButton}>
-                <Text style={styles.backText}>
-                  {data.item.done ? 'Undo' : 'Done'}
-                </Text>
+      <SafeAreaProvider>
+        <SafeAreaView
+          style={[styles.container, { paddingBottom: this.state.viewPadding }]}
+        >
+          <SwipeListView
+            useFlatList
+            style={styles.list}
+            data={this.state.tasks}
+            renderItem={this._renderItem.bind(this)}
+            renderHiddenItem={ (data, rowMap) => (
+              <View style={styles.rowBack}>
+                <View style={styles.backLeftButton}>
+                  <Text style={styles.backText}>
+                    {data.item.done ? 'Undo' : 'Done'}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.backRightButton, {
+                    width: this.state.rightButtonWidth
+                  }]}
+                  onPress={ _ => this.deleteTask(data.item.key) }>
+                  <Text style={styles.backButtonText}>Delete</Text>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                style={[styles.backRightButton, {
-                  width: this.state.rightButtonWidth
-                }]}
-                onPress={ _ => this.deleteTask(data.item.key) }>
-  							<Text style={styles.backButtonText}>Delete</Text>
-  						</TouchableOpacity>
-            </View>
-          )}
-          keyExtractor={(item, index) => item.key}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-          leftOpenValue={375}
-          rightOpenValue={-75}
-          onSwipeValueChange={this.onSwipeValueChange}
-        />
-        <TextInput
-          style={styles.textInput}
-          onChangeText={this.changeTextHandler}
-          onSubmitEditing={this.addTask}
-          value={this.state.text}
-          placeholder="Add Tasks"
-          returnKeyType="done"
-          returnKeyLabel="done"
-        />
-      </SafeAreaView>
+            )}
+            keyExtractor={(item, index) => item.key}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+            leftOpenValue={375}
+            rightOpenValue={-75}
+            onSwipeValueChange={this.onSwipeValueChange}
+          />
+          <TextInput
+            style={styles.textInput}
+            onChangeText={this.changeTextHandler}
+            onSubmitEditing={this.addTask}
+            value={this.state.text}
+            placeholder="Add Tasks"
+            returnKeyType="done"
+            returnKeyLabel="done"
+          />
+        </SafeAreaView>
+      </SafeAreaProvider>
     );
   }
 
